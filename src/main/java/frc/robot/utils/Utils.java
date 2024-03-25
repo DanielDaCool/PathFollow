@@ -9,7 +9,6 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Field;
 import frc.robot.RobotContainer;
-import frc.robot.subsystems.shooter.Shooter;
 
 public class Utils {
     
@@ -82,21 +81,7 @@ public class Utils {
     return new Pair<Double,Double>(a,v);
   }
 
-  public static Translation2d speakerPosition() {
-    return RobotContainer.robotContainer.isRed()? Field.RedSpeaker: Field.Speaker;
-  }
-  public static Translation2d speakerTargetPosition() {
-    return RobotContainer.robotContainer.isRed()? Field.RedSpeakerTarget: Field.SpeakerTarget;
-  }
-
-  public static Translation2d ampPosition() {
-    return RobotContainer.robotContainer.isRed()? Field.RedAMP: Field.AMP;
-  }
-
-  public static Translation2d subShootPosition() {
-    return RobotContainer.robotContainer.isRed()? Field.RedSubShootPosition: Field.SubShootPosition;
-  }
-
+  
   public static double angelErrorInDegrees(Rotation2d r1, Rotation2d r2, double deadband) {
     
     return deadband(MathUtil.inputModulus(r1.minus(r2).getDegrees(), -180, 180),deadband);

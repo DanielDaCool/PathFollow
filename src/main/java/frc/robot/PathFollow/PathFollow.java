@@ -1,4 +1,4 @@
-package frc.robot.commands.chassis;
+package frc.robot.PathFollow;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -25,41 +25,39 @@ import frc.robot.PathFollow.Util.pathPoint;
 import frc.robot.subsystems.chassis.*;
 import frc.robot.utils.TrapezoidNoam;
 
+import static frc.robot.PathFollow.PathFollowConstants.*;
+
 public class PathFollow extends Command {
   Timer timer = new Timer();
 
   Chassis chassis;
   RoundedPoint[] corners;
-  Pose2d closestAprilTag = new Pose2d();
 
   Pose2d chassisPose = new Pose2d();
-  double distanceOffset = 0.01;
+
   double pathLength;
 
   double totalLeft;
-  int segmentIndex = 0;
+  int segmentIndex;
 
   Segment[] segments;
   Translation2d vecVel;
   Rotation2d wantedAngle;
 
-  TrapezoidNoam driveTrapezoid;
-  TrapezoidNoam rotationTrapezoid;
+
 
   double driveVelocity = 0;
   double rotationVelocity = 0;
   static double fieldLength = 16.54; // in meters
   static double fieldHeight = 8.21; // in meters
   boolean isRed;
-  boolean rotateToSpeaker = false;
 
   Trajectory traj;
   double distancePassed = 0;
   pathPoint[] points;
+
   double finishVel;
 
-  boolean autoRotate = false;
-  double autoRotateVel = 2;
 
   /**
    * Creates a new path follower using the given points.
@@ -71,42 +69,32 @@ public class PathFollow extends Command {
    * 
    */
 
-  public PathFollow(pathPoint[] points, double velocity) {
-    this(RobotContainer.robotContainer.chassis, points, velocity, velocity * 2,
-        0, RobotContainer.robotContainer.isRed());
+
+  public PathFollow(pathPoint[] points){
+    this(RobotContainer.robotContainer.chassis, points, ChassisConstants.MAX_DRIVE_VELOCITY, ChassisConstants.MAX_DRIVE_VELOCITY * 2, 0);
+    addRequirements(chassis);
   }
 
-  public PathFollow(pathPoint[] points) {
-    this(RobotContainer.robotContainer.chassis, points, ChassisConstants.MAX_DRIVE_VELOCITY,
-        ChassisConstants.DRIVE_ACCELERATION,
-        0, RobotContainer.robotContainer.isRed());
+  public PathFollow(pathPoint[] points, double vel){
+    this(RobotContainer.robotContainer.chassis, points, vel, vel * 2, 0);
+    addRequirements(chassis);
   }
 
   public PathFollow(Chassis chassis, pathPoint[] points, double maxVel, double maxAcc, double finishVel) {
     this.points = points;
     this.finishVel = finishVel;
-
     this.chassis = chassis;
-
-    // gets the wanted angle for the robot to finish the path in
-
-    // creates new coreners array of the "arc points" in the path
     addRequirements(chassis);
 
     // creates trapezoid object for drive and rotation
-    driveTrapezoid = new TrapezoidNoam(maxVel, maxAcc);
-    rotationTrapezoid = new TrapezoidNoam(180, 360);
+
 
     // calculate the total length of the path
-    segments = new Segment[1 + ((points.length - 2) * 2)];
+    
 
   }
 
-  public PathFollow(Chassis chassis, pathPoint[] points, double maxVel, double maxAcc, double finishVel,
-      boolean rotateToSpeaker) {
-    this(chassis, points, maxVel, maxAcc, finishVel);
-    this.rotateToSpeaker = rotateToSpeaker;
-  }
+
 
     public static double convertAlliance(double x) {
     return fieldLength - x;
@@ -123,6 +111,8 @@ public class PathFollow extends Command {
 
   @Override
   public void initialize() {
+    segments = new Segment[1 + ((points.length - 2) * 2)];
+
     isRed = RobotContainer.robotContainer.isRed();
     // sets first point to chassis pose to prevent bugs with red and blue alliance
     points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(), points[1].getRotation(),
@@ -194,11 +184,7 @@ public class PathFollow extends Command {
 
   @Override
   public void execute() {
-
-  
-
     chassisPose = chassis.getPose();
-
 
     // current velocity vector
     Translation2d currentVelocity = new Translation2d(chassis.getChassisSpeeds().vxMetersPerSecond, chassis.getChassisSpeeds().vyMetersPerSecond);
@@ -228,6 +214,11 @@ public class PathFollow extends Command {
 
     //case for correct Translation2d but wrong angle so stop chassis but keep rotation
     if (totalLeft <= 0.1) velVector = new Translation2d(0, 0);
+
+    //calc rotation velocity based on PID
+    double rotationVelocity = (Math.abs(wantedAngle.minus(chassis.getAngle()).getDegrees()) <= ANGLE_OFFSET)
+      ? 0 : ROTATION_PID.calculate(distanceOffset, ANGLE_OFFSET);
+
     ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), 0);
     
    

@@ -1,5 +1,6 @@
 package frc.robot.subsystems.chassis;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -38,6 +39,9 @@ public final class ChassisConstants {
   public static final Translation2d note5 = new Translation2d(); //TODO
 
   public static final int GYRO_ID = 19;
+
+  public static PIDController rotationPidChassis = new PIDController(0.05,0.0, 0.002);
+  
 
   public static final double CYCLE_DT = 0.02;
 
