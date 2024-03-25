@@ -23,13 +23,13 @@ import frc.robot.PathFollow.Util.RoundedPoint;
 import frc.robot.PathFollow.Util.Segment;
 import frc.robot.PathFollow.Util.pathPoint;
 import frc.robot.subsystems.chassis.*;
+import frc.robot.utils.Trapezoid;
 import frc.robot.utils.TrapezoidNoam;
 
 import static frc.robot.PathFollow.PathFollowConstants.*;
 
 public class PathFollow extends Command {
   Timer timer = new Timer();
-
   Chassis chassis;
   RoundedPoint[] corners;
 
@@ -44,19 +44,22 @@ public class PathFollow extends Command {
   Translation2d vecVel;
   Rotation2d wantedAngle;
 
+  double distancePassed;
+  double driveVelocity;
+  double rotationVelocity;
 
-
-  double driveVelocity = 0;
-  double rotationVelocity = 0;
   static double fieldLength = 16.54; // in meters
   static double fieldHeight = 8.21; // in meters
+  
   boolean isRed;
 
-  Trajectory traj;
-  double distancePassed = 0;
   pathPoint[] points;
 
   double finishVel;
+  double maxVel;
+  double accel;
+
+  Trapezoid driveTrapezoid;
 
 
   /**
@@ -71,7 +74,7 @@ public class PathFollow extends Command {
 
 
   public PathFollow(pathPoint[] points){
-    this(RobotContainer.robotContainer.chassis, points, ChassisConstants.MAX_DRIVE_VELOCITY, ChassisConstants.MAX_DRIVE_VELOCITY * 2, 0);
+    this(RobotContainer.robotContainer.chassis, points, PATH_MAX_VELOCITY, PATH_ACCEL, 0);
     addRequirements(chassis);
   }
 
@@ -79,11 +82,17 @@ public class PathFollow extends Command {
     this(RobotContainer.robotContainer.chassis, points, vel, vel * 2, 0);
     addRequirements(chassis);
   }
+  public PathFollow(pathPoint[] points, double vel, double finishVel){
+    this(RobotContainer.robotContainer.chassis, points, vel, vel * 2, finishVel);
+    addRequirements(chassis);
+  }
 
-  public PathFollow(Chassis chassis, pathPoint[] points, double maxVel, double maxAcc, double finishVel) {
+  public PathFollow(Chassis chassis, pathPoint[] points, double maxVel, double accel, double finishVel) {
     this.points = points;
     this.finishVel = finishVel;
     this.chassis = chassis;
+    this.maxVel = maxVel;
+    this.accel = accel; 
     addRequirements(chassis);
 
     // creates trapezoid object for drive and rotation
@@ -111,30 +120,35 @@ public class PathFollow extends Command {
 
   @Override
   public void initialize() {
+    distancePassed = 0;
+
+    driveTrapezoid = new Trapezoid(maxVel, accel, finishVel);
+
+
     segments = new Segment[1 + ((points.length - 2) * 2)];
 
     isRed = RobotContainer.robotContainer.isRed();
     // sets first point to chassis pose to prevent bugs with red and blue alliance
     points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(), points[1].getRotation(),
-        points[0].getRadius(), false);
+        points[0].getRadius());
 
     // case for red alliance (blue is the default)
     if (isRed) {
       points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(),
-          Rotation2d.fromDegrees(180).minus(points[1].getRotation()), points[0].getRadius(), false);
+          Rotation2d.fromDegrees(180).minus(points[1].getRotation()), points[0].getRadius());
       for (int i = 1; i < points.length; i++) {
         points[i] = new pathPoint(fieldLength - points[i].getX(), points[i].getY(),
             Rotation2d.fromDegrees(180).minus(points[i].getRotation()),
-            points[i].getRadius(), points[i].isAprilTag());
+            points[i].getRadius());
       }
     }
     corners = new RoundedPoint[points.length - 2];
     for (int i = 0; i < points.length - 2; i++) {
-      corners[i] = new RoundedPoint(points[i], points[i + 1], points[i + 2], points[i].isAprilTag());
+      corners[i] = new RoundedPoint(points[i], points[i + 1], points[i + 2]);
     }
     // case for 1 segment, need to create only 1 leg
     if (points.length < 3) {
-      segments[0] = new Leg(points[0].getTranslation(), points[1].getTranslation(), points[1].isAprilTag());
+      segments[0] = new Leg(points[0].getTranslation(), points[1].getTranslation());
       // System.out.println("------LESS THAN 3------");
     }
     // case for more then 1 segment
@@ -148,9 +162,7 @@ public class PathFollow extends Command {
 
         segments[segmentIndexCreator] = corners[i].getArc();
 
-        segments[segmentIndexCreator + 1] = new Leg(corners[i].getCurveEnd(), corners[i + 1].getCurveStart(),
-            points[segmentIndexCreator].isAprilTag());
-        segments[segmentIndexCreator].setAprilTagMode(points[segmentIndexCreator].isAprilTag());
+        segments[segmentIndexCreator + 1] = new Leg(corners[i].getCurveEnd(), corners[i + 1].getCurveStart());
         segmentIndexCreator += 2;
       }
       // creates the last arc and leg
@@ -172,12 +184,7 @@ public class PathFollow extends Command {
   }
 
   // calculates the position of the closet april tag and returns it's position
-  boolean foundAprilTag = false;
-
-  
-
-
-
+ 
   public static double fixY(double y) {
     return fieldHeight - y;
   }
@@ -195,7 +202,7 @@ public class PathFollow extends Command {
     wantedAngle = points[segmentIndex].getRotation();
 
     //update total left when finished current segment
-    if (segments[segmentIndex].distancePassed(chassisPose.getTranslation()) >= segments[segmentIndex].getLength() - distanceOffset) {
+    if (segments[segmentIndex].distancePassed(chassisPose.getTranslation()) >= segments[segmentIndex].getLength() - PATH_DISTANCE_OFFSET) {
       totalLeft -= segments[segmentIndex].getLength();
       //update segment index
       if (segmentIndex != segments.length - 1 || segments[segmentIndex].getLength() <= 0.15)
@@ -203,31 +210,24 @@ public class PathFollow extends Command {
     }
 
     //calc drive velocity
-    driveVelocity = driveTrapezoid.calculate(
+    driveVelocity = driveTrapezoid.calcVelocity(
         totalLeft - segments[segmentIndex].distancePassed(chassisPose.getTranslation()),
-        currentVelocity.getNorm(), finishVel);
+        currentVelocity.getNorm());
 
     Translation2d velVector = segments[segmentIndex].calc(chassisPose.getTranslation(), driveVelocity);
 
     
-
-
     //case for correct Translation2d but wrong angle so stop chassis but keep rotation
-    if (totalLeft <= 0.1) velVector = new Translation2d(0, 0);
+    if (totalLeft <= PATH_DISTANCE_OFFSET) velVector = new Translation2d(0, 0);
 
     //calc rotation velocity based on PID
-    double rotationVelocity = (Math.abs(wantedAngle.minus(chassis.getAngle()).getDegrees()) <= ANGLE_OFFSET)
-      ? 0 : ROTATION_PID.calculate(distanceOffset, ANGLE_OFFSET);
+    double rotationVelocity = (Math.abs(wantedAngle.minus(chassis.getAngle()).getDegrees()) <= PATH_ANGLE_OFFSET)
+      ? 0 : PATH_ROTATION_PID.calculate(chassis.getAngle().getDegrees(), 0);
 
-    ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), 0);
-    
-   
-   
+    ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), rotationVelocity); //TODO FIX ROTATION
+    chassis.setVelocities(speed);
 
   }
-
-
-
   @Override
   public void end(boolean interrupted) {
     if(finishVel == 0) chassis.stop();
@@ -235,6 +235,6 @@ public class PathFollow extends Command {
 
   @Override
   public boolean isFinished() {
-    return totalLeft <= 0.1;
+    return totalLeft <= PATH_DISTANCE_OFFSET;
   }
 }

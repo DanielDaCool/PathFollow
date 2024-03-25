@@ -15,7 +15,6 @@ public class TrapezoidNoam {
     private double lastTime  = 0;
     private double lastV;
     private double lastA;
-    public boolean debug = false;
 
 
     // Constructor to initialize with maximum velocity and acceleration
@@ -68,9 +67,6 @@ public class TrapezoidNoam {
             double a = (curentVelocity - targetVelocity)/t;
             lastV = Math.min(maxVelocity,curentVelocity - a*0.02);
           //  if(debug) System.out.println(" reduce v - " + a + " maxV=" + maxVelocity + " maxA=" + maxAcceleration);
-        }
-        if(debug) {
-            System.out.println(" Trap: curV = " + baseCurV + " / " + curentVelocity + " next=" + lastV + " remain=" + remainingDistance);
         }
         lastA = lastV - curentVelocity;
         lastTime = time;

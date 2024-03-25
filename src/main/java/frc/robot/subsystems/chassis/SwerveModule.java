@@ -83,7 +83,7 @@ public class SwerveModule implements Sendable {
         pulsePerDegree = constants.pulsePerDegree;
         pulsePerMeter = constants.pulsePerMeter;
         MaxSteerClosedLoopError = MAX_STEER_ERROR*pulsePerDegree;
-        steerTrapezoid = new Trapezoid(MAX_STEER_VELOCITY, STEER_ACCELERATION);
+        steerTrapezoid = new Trapezoid(MAX_STEER_VELOCITY, STEER_ACCELERATION, 0);
         angleOffset = constants.steerOffset;
         // name
         name = (constants.moduleTranslationOffset.getX()>0?"Front":"Back") + 
@@ -343,7 +343,7 @@ public class SwerveModule implements Sendable {
         double v = 0;
         if(Math.abs(diff) > MAX_STEER_ERROR) {
             double cv = getSteerVelocity();
-            v = steerTrapezoid.calculate(diff, cv, 0, debug);
+            v = steerTrapezoid.calcVelocity(diff, cv);
         }
         setSteerVelocity(v, false);
     }

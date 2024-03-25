@@ -41,8 +41,7 @@ import com.ctre.phoenix.sensors.Pigeon2;
 public class Chassis extends SubsystemBase {
   private final SwerveModule[] modules;
   private final Pigeon2 gyro;
-  private Trapezoid rotationTrapezoid = new Trapezoid(Math.toRadians(300), Math.toRadians(500));
-  private Trapezoid rotationTrapezoidSpeaker = new Trapezoid(Math.toRadians(720), Math.toRadians(720));
+
 
   private double speakerAngleError;
 
@@ -96,8 +95,6 @@ public class Chassis extends SubsystemBase {
 
     SmartDashboard.putData("calibrate", new InstantCommand(()->calibrate(), this).ignoringDisable(true));
     
-    pathPoint dummyPoint = new pathPoint(0, 0, new Rotation2d(), 0, false);
-    pathPoint point = new pathPoint(2, 1, Rotation2d.fromDegrees(-20), 0, false);
 
   
    

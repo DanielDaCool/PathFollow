@@ -13,7 +13,6 @@ public class Arc extends Segment{
 
     //p1 represents the start point, p2 represents the circle center
     Rotation2d angle;
-    double maxVel = 2;
 
 
     final Translation2d startVector;
@@ -24,10 +23,10 @@ public class Arc extends Segment{
      * @param p2 - Circle center of arc
      * @param angle - Arc's angle
      */
-    public Arc(Translation2d p1, Translation2d p2, Rotation2d angle, boolean isAprilTagMode)
+    public Arc(Translation2d p1, Translation2d p2, Rotation2d anglee)
     {
         //start point
-        super(p1,p2, isAprilTagMode);
+        super(p1,p2);
         this.angle = angle;
 
         startVector = p1.minus(p2);
@@ -58,7 +57,6 @@ public class Arc extends Segment{
     public Translation2d calc(Translation2d pos,double velocity)
     {
 
-        if(isAprilTagMode()) velocity = Math.min(velocity, 1);
         Translation2d relativePos = pos.minus(p2);
         double dFromCenter = relativePos.getNorm();
 
