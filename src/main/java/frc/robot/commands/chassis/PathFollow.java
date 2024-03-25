@@ -1,4 +1,4 @@
-package frc.robot.commands.chassis.Paths;
+package frc.robot.commands.chassis;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -45,7 +45,6 @@ public class PathFollow extends Command {
 
   TrapezoidNoam driveTrapezoid;
   TrapezoidNoam rotationTrapezoid;
-  Field2d trajField = new Field2d();
 
   double driveVelocity = 0;
   double rotationVelocity = 0;
@@ -107,6 +106,10 @@ public class PathFollow extends Command {
       boolean rotateToSpeaker) {
     this(chassis, points, maxVel, maxAcc, finishVel);
     this.rotateToSpeaker = rotateToSpeaker;
+  }
+
+    public static double convertAlliance(double x) {
+    return fieldLength - x;
   }
 
   /*
@@ -174,17 +177,6 @@ public class PathFollow extends Command {
     totalLeft = pathLength;
     segmentIndex = 0;
 
-    List<State> list = new ArrayList<>();
-    for (int i = 0; i < points.length; i++) {
-      State temp = new State();
-      temp.poseMeters = new Pose2d(points[i].getX(), points[i].getY(), new Rotation2d(0));
-      list.add(temp);
-    }
-
-    // System.out.println("LIST: " + list);
-
-    traj = new Trajectory(list);
-    trajField.getObject("TrajTEST").setTrajectory(traj);
 
     vecVel = new Translation2d(0, 0);
   }
@@ -192,26 +184,9 @@ public class PathFollow extends Command {
   // calculates the position of the closet april tag and returns it's position
   boolean foundAprilTag = false;
 
-  public Rotation2d getAngleApriltag() {
-    Translation2d finalVector = new Translation2d(Integer.MAX_VALUE, Integer.MAX_VALUE);
-    // checks the distance from each april tag and finds
-    for (int i = 0; i < aprilTagsPositions.length; i++) {
+  
 
-      Translation2d currentAprilTagVector = chassis.getPose().minus(aprilTagsPositions[i]).getTranslation();
 
-      if (currentAprilTagVector.getNorm() < finalVector.getNorm()) {
-        finalVector = currentAprilTagVector;
-      }
-
-    }
-    foundAprilTag = true;
-
-    return finalVector.getAngle();
-  }
-
-  public static double convertAlliance(double x) {
-    return fieldLength - x;
-  }
 
   public static double fixY(double y) {
     return fieldHeight - y;
@@ -220,99 +195,55 @@ public class PathFollow extends Command {
   @Override
   public void execute() {
 
-    trajField.setRobotPose(chassis.getPose());
+  
 
     chassisPose = chassis.getPose();
-    // SmartDashboard.putNumber("Angle traj",
-    // points[segmentIndex].getRotation().getDegrees());
+
 
     // current velocity vector
-    Translation2d currentVelocity = new Translation2d(chassis.getChassisSpeeds().vxMetersPerSecond,
-        chassis.getChassisSpeeds().vyMetersPerSecond);
+    Translation2d currentVelocity = new Translation2d(chassis.getChassisSpeeds().vxMetersPerSecond, chassis.getChassisSpeeds().vyMetersPerSecond);
+
+    //calc for distance passed based on total left minus distance passed on current segment
     distancePassed = totalLeft - segments[segmentIndex].distancePassed(chassisPose.getTranslation());
 
-    if (segments[segmentIndex].distancePassed(chassisPose.getTranslation()) >= segments[segmentIndex].getLength()
-        - distanceOffset) {
+    wantedAngle = points[segmentIndex].getRotation();
+
+    //update total left when finished current segment
+    if (segments[segmentIndex].distancePassed(chassisPose.getTranslation()) >= segments[segmentIndex].getLength() - distanceOffset) {
       totalLeft -= segments[segmentIndex].getLength();
+      //update segment index
       if (segmentIndex != segments.length - 1 || segments[segmentIndex].getLength() <= 0.15)
         segmentIndex++;
     }
+
+    //calc drive velocity
     driveVelocity = driveTrapezoid.calculate(
         totalLeft - segments[segmentIndex].distancePassed(chassisPose.getTranslation()),
         currentVelocity.getNorm(), finishVel);
 
     Translation2d velVector = segments[segmentIndex].calc(chassisPose.getTranslation(), driveVelocity);
 
-    // System.out.println("APRILTAG MODE: " +
-    // segments[segmentIndex].isAprilTagMode());
-    if (segments[segmentIndex].isAprilTagMode()) {
-      if (!foundAprilTag)
-        wantedAngle = getAngleApriltag();
-    }
+    
 
-    else {
-      wantedAngle = points[segmentIndex].getRotation();
-    }
 
-    if (totalLeft <= 0.1)
-      velVector = new Translation2d(0, 0);
+    //case for correct Translation2d but wrong angle so stop chassis but keep rotation
+    if (totalLeft <= 0.1) velVector = new Translation2d(0, 0);
     ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), 0);
-    if (rotateToSpeaker) {
-      chassis.setVelocitiesRotateToSpeaker(speed);
-    } else if(autoRotate) {
-      speed.omegaRadiansPerSecond = autoRotateVel;
-      chassis.setVelocities(speed);
-    } else {
-      chassis.setVelocitiesRotateToAngle(speed, wantedAngle);
-    }
+    
+   
+   
 
   }
 
-  public PathFollow setAutoRotate(double rate) {
-    autoRotate = true;
-    autoRotateVel = rate;
-    return this;
-  }
+
 
   @Override
   public void end(boolean interrupted) {
     if(finishVel == 0) chassis.stop();
-    driveTrapezoid.debug = false;
-    // .useAcceleration = true;
   }
 
   @Override
   public boolean isFinished() {
     return totalLeft <= 0.1;
-  }
-
-  @Override
-  public void initSendable(SendableBuilder builder) {
-    // builder.addStringProperty("Current Segment", () -> currentSegmentInfo(),
-    // null);
-    super.initSendable(builder);
-    builder.addDoubleProperty("Distance Passed", () -> {
-      return distancePassed;
-    }, null);
-    builder.addDoubleProperty("Total Left", () -> {
-      return totalLeft;
-    }, null);
-    builder.addDoubleProperty("Velocity", () -> {
-      return driveVelocity;
-    }, null);
-    builder.addDoubleProperty("Rotation Velocity", () -> {
-      return Math.toDegrees(rotationVelocity);
-    }, null);
-    builder.addDoubleProperty("Angle", () -> {
-      return chassisPose.getRotation().getDegrees();
-    }, null);
-    builder.addDoubleProperty("Pose X", () -> chassis.getPose().getX(), null);
-    builder.addDoubleProperty("Pose Y", () -> chassis.getPose().getY(), null);
-  }
-
-  public void printSegments() {
-    for (Segment s : segments) {
-     System.out.println(s);
-    }
   }
 }
