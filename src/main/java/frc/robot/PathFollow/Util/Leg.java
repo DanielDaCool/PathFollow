@@ -25,6 +25,10 @@ public class Leg extends Segment{
         totalVector = p2.minus(p1);
         velDirection = totalVector.div(totalVector.getNorm());
     }
+    @Override
+    public Translation2d[] getPoints(){
+        return new Translation2d[] {p1, p2};
+    }
 
     @Override
     public Translation2d calc(Translation2d position, double velocity)

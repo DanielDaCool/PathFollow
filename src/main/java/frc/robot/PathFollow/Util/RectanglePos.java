@@ -22,4 +22,9 @@ public class RectanglePos {
         return pos.getX() >= bottomLeft.getX() && pos.getX() <= topRight.getX() &&
         pos.getY() >= bottomLeft.getY() && pos.getY() <= topRight.getY();
     }
+
+    public Translation2d getTopRight(){return topRight; }
+    public Translation2d getBottomLeft() { return bottomLeft;}
+    public Translation2d getTopLeft() { return new Translation2d(bottomLeft.getX(), topRight.getY());}
+    public Translation2d getBottomRight(){ return new Translation2d(topRight.getX(), bottomLeft.getY());}
 }

@@ -18,7 +18,7 @@ public class CurrentPosOnField {
             if(rectSPEAKER.isInside((robotPos))) return SPEKAER;
             if(rectSOURCE.isInside(robotPos)) return SOURCE;
             if(rectSTAGE.isInside(robotPos)) return STAGE;
-            return OPEN;       
+            return OPEN;
         }
     }
 
