@@ -15,17 +15,19 @@ import edu.wpi.first.math.geometry.Translation2d;
  */
 public class pathPoint extends Pose2d{
     double radius;
+    double velocity;
 
-    public pathPoint(Translation2d p, Rotation2d r) {
-      this(p.getX(),p.getY(),r,0);
+    public pathPoint(Translation2d p, Rotation2d r, double velocity) {
+      this(p.getX(),p.getY(),r,0, velocity);
     }
-    public pathPoint(Translation2d p, Rotation2d r, double radius) {
-      this(p.getX(),p.getY(),r,radius);
+    public pathPoint(Translation2d p, Rotation2d r, double radius, double velocity) {
+      this(p.getX(),p.getY(),r,radius, velocity);
     }
     
-    public pathPoint(double x, double y, Rotation2d rotation, double radius) {
+    public pathPoint(double x, double y, Rotation2d rotation, double radius, double velocity) {
         super(x,y,rotation);
         this.radius = radius;
+        this.velocity = velocity;
       
       }
 
@@ -33,11 +35,18 @@ public class pathPoint extends Pose2d{
     {
       return radius;
     }
-
     public void setRadius(double radius)
     {
       this.radius = radius;
     }
+    public double getVelocity(){
+      return velocity;
+    }
+    public void setVelocity(double velocity){
+      this.velocity = velocity;
+    }
+
+
 
 
 }

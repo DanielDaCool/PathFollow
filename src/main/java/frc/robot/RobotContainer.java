@@ -29,7 +29,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.utils.Utils;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-
+import frc.robot.PathFollow.Util.pathPoint;
 import frc.robot.commands.chassis.DriveToNote;
 
 
@@ -59,6 +59,7 @@ public class RobotContainer{
   
   private enum AutoOptions { Shoot, Wing, Destroy, Bottom};
   private SendableChooser<AutoOptions> autoChoose;
+  
 
   public boolean isRed(){
     return isRed;

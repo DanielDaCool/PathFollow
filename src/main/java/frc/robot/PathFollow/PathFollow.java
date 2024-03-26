@@ -79,11 +79,11 @@ public class PathFollow extends Command {
   }
 
   public PathFollow(pathPoint[] points, double vel){
-    this(RobotContainer.robotContainer.chassis, points, vel, vel * 2, 0);
+    this(RobotContainer.robotContainer.chassis, points, vel, PATH_ACCEL, 0);
     addRequirements(chassis);
   }
   public PathFollow(pathPoint[] points, double vel, double finishVel){
-    this(RobotContainer.robotContainer.chassis, points, vel, vel * 2, finishVel);
+    this(RobotContainer.robotContainer.chassis, points, vel, PATH_ACCEL, finishVel);
     addRequirements(chassis);
   }
 
@@ -95,10 +95,6 @@ public class PathFollow extends Command {
     this.accel = accel; 
     addRequirements(chassis);
 
-    // creates trapezoid object for drive and rotation
-
-
-    // calculate the total length of the path
     
 
   }
@@ -120,26 +116,27 @@ public class PathFollow extends Command {
 
   @Override
   public void initialize() {
+
     distancePassed = 0;
 
-    driveTrapezoid = new Trapezoid(maxVel, accel, finishVel);
-
+    
+    driveTrapezoid = new Trapezoid(points[0].getVelocity(), PATH_ACCEL, points[1].getVelocity());
 
     segments = new Segment[1 + ((points.length - 2) * 2)];
 
     isRed = RobotContainer.robotContainer.isRed();
     // sets first point to chassis pose to prevent bugs with red and blue alliance
     points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(), points[1].getRotation(),
-        points[0].getRadius());
+        points[0].getRadius(), chassis.getVelocity().getNorm());
 
     // case for red alliance (blue is the default)
     if (isRed) {
       points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(),
-          Rotation2d.fromDegrees(180).minus(points[1].getRotation()), points[0].getRadius());
+          Rotation2d.fromDegrees(180).minus(points[1].getRotation()), points[0].getRadius(), chassis.getVelocity().getNorm());
       for (int i = 1; i < points.length; i++) {
         points[i] = new pathPoint(fieldLength - points[i].getX(), points[i].getY(),
             Rotation2d.fromDegrees(180).minus(points[i].getRotation()),
-            points[i].getRadius());
+            points[i].getRadius(), points[i].getVelocity());
       }
     }
     corners = new RoundedPoint[points.length - 2];
@@ -189,6 +186,13 @@ public class PathFollow extends Command {
     return fieldHeight - y;
   }
 
+  public boolean isFinishedSegment(double distancePassed, double segmentLength){
+    return distancePassed >= segmentLength;
+  }
+  public boolean isLastSegment(int index){
+    return index == segments.length - 1;
+  }
+
   @Override
   public void execute() {
     chassisPose = chassis.getPose();
@@ -202,11 +206,15 @@ public class PathFollow extends Command {
     wantedAngle = points[segmentIndex].getRotation();
 
     //update total left when finished current segment
-    if (segments[segmentIndex].distancePassed(chassisPose.getTranslation()) >= segments[segmentIndex].getLength() - PATH_DISTANCE_OFFSET) {
+    if(isFinishedSegment(segments[segmentIndex].distancePassed(chassisPose.getTranslation()), segments[segmentIndex].getLength() - PATH_DISTANCE_OFFSET)){
       totalLeft -= segments[segmentIndex].getLength();
+      
       //update segment index
-      if (segmentIndex != segments.length - 1 || segments[segmentIndex].getLength() <= 0.15)
+      if (!isLastSegment(segmentIndex) || segments[segmentIndex].getLength() <= 0.15){
         segmentIndex++;
+        driveTrapezoid = new Trapezoid(points[segmentIndex].getVelocity(), accel, points[segmentIndex+1].getVelocity());
+      }
+      else driveTrapezoid = new Trapezoid(points[segmentIndex].getVelocity(), accel, finishVel);
     }
 
     //calc drive velocity
@@ -224,7 +232,7 @@ public class PathFollow extends Command {
     double rotationVelocity = (Math.abs(wantedAngle.minus(chassis.getAngle()).getDegrees()) <= PATH_ANGLE_OFFSET)
       ? 0 : PATH_ROTATION_PID.calculate(chassis.getAngle().getDegrees(), 0);
 
-    ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), rotationVelocity); //TODO FIX ROTATION
+    ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), rotationVelocity); 
     chassis.setVelocities(speed);
 
   }

@@ -17,14 +17,16 @@ public class AvoidBannedZone {
     public static boolean isInsideLeg(Leg leg){
         Translation2d p1 = leg.p1;
         Translation2d p2 = leg.p2;
-        double slope = calcSlope(p1, p2);
-        double bParam = calcBParam(p1, slope);
         for(RectanglePos pos : bannedPos){
             for(Translation2d[] line : pos.getLinesPoints()){
                 if(isIntersecting(p1, p2, line[0], line[1])) return true;
             }
         }
         return false;
+    }
+    public static pathPoint[] fixPoint(){
+        //TODO finish
+        return new pathPoint[]{};
     }
 
     private static boolean isIntersecting(Translation2d legP1, Translation2d legP2, Translation2d recP1, Translation2d recP2){

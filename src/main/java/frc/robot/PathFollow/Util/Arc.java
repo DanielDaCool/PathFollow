@@ -23,7 +23,7 @@ public class Arc extends Segment{
      * @param p2 - Circle center of arc
      * @param angle - Arc's angle
      */
-    public Arc(Translation2d p1, Translation2d p2, Rotation2d anglee)
+    public Arc(Translation2d p1, Translation2d p2, Rotation2d angle)
     {
         //start point
         super(p1,p2);
