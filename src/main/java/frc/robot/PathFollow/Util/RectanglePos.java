@@ -23,8 +23,13 @@ public class RectanglePos {
         pos.getY() >= bottomLeft.getY() && pos.getY() <= topRight.getY();
     }
 
+    public Translation2d[][] getLinesPoints(){
+        return new Translation2d[][] { {getBottomLeft(), getBottomRight()}, {getBottomLeft(), getTopLeft()}, {getTopRight(), getTopLeft()}, {getBottomRight(), getTopRight()}};
+    }
+
     public Translation2d getTopRight(){return topRight; }
     public Translation2d getBottomLeft() { return bottomLeft;}
     public Translation2d getTopLeft() { return new Translation2d(bottomLeft.getX(), topRight.getY());}
     public Translation2d getBottomRight(){ return new Translation2d(topRight.getX(), bottomLeft.getY());}
+    
 }
