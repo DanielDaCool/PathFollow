@@ -31,5 +31,6 @@ public class RectanglePos {
     public Translation2d getBottomLeft() { return bottomLeft;}
     public Translation2d getTopLeft() { return new Translation2d(bottomLeft.getX(), topRight.getY());}
     public Translation2d getBottomRight(){ return new Translation2d(topRight.getX(), bottomLeft.getY());}
+
     
 }
