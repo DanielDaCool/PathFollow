@@ -1,14 +1,15 @@
 
 package frc.robot.PathFollow.Util;
 
+import static frc.robot.PathFollow.PathFollowConstants.*;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import edu.wpi.first.math.Pair;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import static frc.robot.PathFollow.PathFollowConstants.*;
 
 public class AvoidBannedZone {
     private static RectanglePos[] bannedPos;
@@ -61,15 +62,15 @@ public class AvoidBannedZone {
             }
             newPoints.add(new pathPoint(segment.p2, Rotation2d.fromDegrees(0), PATH_MAX_VELOCITY_AVOID));
         }
+        else{
+            newPoints.add(new pathPoint(segment.p1, Rotation2d.fromDegrees(0), PATH_MAX_VELOCITY_AVOID));
+            newPoints.add(new pathPoint(segment.p2, Rotation2d.fromDegrees(0), PATH_MAX_VELOCITY_AVOID));
+        }
 
         return (pathPoint[]) newPoints.toArray();
 
     }
     private static Pair<Translation2d, Translation2d> getFixingPoints(RectanglePos pos, Translation2d p1, Translation2d p2, Translation2d pose){
-
-        //TODO FINISH LOGIC
-        Translation2d firstPoint = new Translation2d();
-        Translation2d secondPoint = new Translation2d();
 
         Translation2d topLtoBottomR = pos.getTopLeft().minus(pos.getBottomRight());
         Translation2d topRtoBottomL = pos.getTopRight().minus(pos.getBottomLeft());
@@ -79,16 +80,18 @@ public class AvoidBannedZone {
         Translation2d bottomLpoint = topLtoBottomR.minus(new Translation2d(PATH_MIN_DISTANCE_FROM_CORNER, topLtoBottomR.getAngle()));
         Translation2d bottomRpoint = topLtoBottomR.minus(new Translation2d(PATH_MIN_DISTANCE_FROM_CORNER, topRtoBottomL.getAngle()));
 
+        HashMap<Translation2d, Translation2d[]> points = new HashMap<>();
+        points.put(topLpoint, new Translation2d[] {topRpoint, bottomLpoint});
+        points.put(topRpoint, new Translation2d[] {topLpoint, bottomRpoint});
+        points.put(bottomRpoint, new Translation2d[] {topRpoint, bottomLpoint});
+        points.put(bottomLpoint, new Translation2d[] {topLpoint, bottomRpoint});
+        
         Translation2d[] fixingPoints = {topLpoint, topRpoint, bottomLpoint, bottomRpoint};
 
-        firstPoint = calcClosetPoint(fixingPoints, pose);
-        secondPoint = calcClosetPoint(fixingPoints, firstPoint);
+        Translation2d firstPoint = calcClosetPoint(fixingPoints, pose);
+        Translation2d secondPoint = calcClosetPoint(points.get(firstPoint), firstPoint);
 
-        
-        
-
-
-
+        return new Pair<Translation2d,Translation2d>(firstPoint, secondPoint);
 
 
     }
