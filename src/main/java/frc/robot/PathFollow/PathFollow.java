@@ -126,6 +126,7 @@ public class PathFollow extends Command {
         points[i] = new pathPoint(fieldLength - points[i].getX(), points[i].getY(),
             Rotation2d.fromDegrees(180).minus(points[i].getRotation()),
             points[i].getRadius(), points[i].getVelocity());
+            
       }
     }
     corners = new RoundedPoint[points.length - 2];
