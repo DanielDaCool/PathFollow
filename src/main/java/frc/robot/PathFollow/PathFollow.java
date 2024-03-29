@@ -1,32 +1,21 @@
 package frc.robot.PathFollow;
 
+import static frc.robot.PathFollow.PathFollowConstants.*;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-
-import static frc.robot.subsystems.chassis.ChassisConstants.*;
-import edu.wpi.first.math.trajectory.Trajectory.State;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import frc.robot.RobotContainer;
+import frc.robot.PathFollow.Util.AvoidBannedZone;
 import frc.robot.PathFollow.Util.Leg;
 import frc.robot.PathFollow.Util.RoundedPoint;
 import frc.robot.PathFollow.Util.Segment;
 import frc.robot.PathFollow.Util.pathPoint;
-import frc.robot.subsystems.chassis.*;
+import frc.robot.subsystems.chassis.Chassis;
 import frc.robot.utils.Trapezoid;
-import frc.robot.utils.TrapezoidNoam;
-
-import static frc.robot.PathFollow.PathFollowConstants.*;
 
 public class PathFollow extends Command {
   Timer timer = new Timer();
@@ -145,7 +134,7 @@ public class PathFollow extends Command {
     }
     // case for 1 segment, need to create only 1 leg
     if (points.length < 3) {
-      segments[0] = new Leg(points[0].getTranslation(), points[1].getTranslation());
+      segments[0] = AvoidBannedZone.fixPoint(new Leg(points[0].getTranslation(), points[1].getTranslation()), points[0].getTranslation());
       // System.out.println("------LESS THAN 3------");
     }
     // case for more then 1 segment

@@ -14,6 +14,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 public class AvoidBannedZone {
     private static RectanglePos[] bannedPos;
     private static RectanglePos intersectionPos = null;
+    private static Segment currentSegment;
 
     private static enum rectanglePoints{
         TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT;
@@ -46,13 +47,14 @@ public class AvoidBannedZone {
         }
         return false;
     }
-    public static pathPoint[] fixPoint(Segment segment, Translation2d pose){
+    public static Segment[] fixPoint(Segment segment, Translation2d pose){
         List<pathPoint> newPoints = new ArrayList<pathPoint>();
         
         //checks if segment given is leg or arc
         boolean isLeg = segment instanceof Leg;
+        currentSegment = segment;
         
-        if(intersectionPos == null) return new pathPoint[]{};
+        if(intersectionPos == null) return new Segment[] {segment};
         if(isLeg){
             newPoints.add(new pathPoint(segment.p1, Rotation2d.fromDegrees(0), 0, PATH_MAX_VELOCITY_AVOID));
             if(isInsideLeg((Leg) segment)){
@@ -66,8 +68,10 @@ public class AvoidBannedZone {
             newPoints.add(new pathPoint(segment.p1, Rotation2d.fromDegrees(0), PATH_MAX_VELOCITY_AVOID));
             newPoints.add(new pathPoint(segment.p2, Rotation2d.fromDegrees(0), PATH_MAX_VELOCITY_AVOID));
         }
+        RoundedPoint calcFirstArc = new RoundedPoint(newPoints.get(0), newPoints.get(1), newPoints.get(2));
+        RoundedPoint calcSecondArc = new RoundedPoint(newPoints.get(1), newPoints.get(2), newPoints.get(3));
 
-        return (pathPoint[]) newPoints.toArray();
+        return new Segment[] {calcFirstArc.getArc(), calcSecondArc.getArc()};
 
     }
     private static Pair<Translation2d, Translation2d> getFixingPoints(RectanglePos pos, Translation2d p1, Translation2d p2, Translation2d pose){
@@ -89,7 +93,7 @@ public class AvoidBannedZone {
         Translation2d[] fixingPoints = {topLpoint, topRpoint, bottomLpoint, bottomRpoint};
 
         Translation2d firstPoint = calcClosetPoint(fixingPoints, pose);
-        Translation2d secondPoint = calcClosetPoint(points.get(firstPoint), firstPoint);
+        Translation2d secondPoint = calcClosetPoint(points.get(firstPoint), currentSegment.p2);
 
         return new Pair<Translation2d,Translation2d>(firstPoint, secondPoint);
 
