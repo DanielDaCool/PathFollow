@@ -2,12 +2,18 @@ package frc.robot.PathFollow;
 
 import static frc.robot.PathFollow.PathFollowConstants.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandBase;
 import frc.robot.RobotContainer;
 import frc.robot.PathFollow.Util.AvoidBannedZone;
 import frc.robot.PathFollow.Util.Leg;
@@ -17,7 +23,7 @@ import frc.robot.PathFollow.Util.pathPoint;
 import frc.robot.subsystems.chassis.Chassis;
 import frc.robot.utils.Trapezoid;
 
-public class PathFollow extends Command {
+public class PathFollow extends CommandBase {
   Timer timer = new Timer();
   Chassis chassis;
   RoundedPoint[] corners;
@@ -28,8 +34,10 @@ public class PathFollow extends Command {
 
   double totalLeft;
   int segmentIndex;
+  Trapezoid rotationTrapezoid;
 
-  Segment[] segments;
+  List<Segment> segments = new ArrayList<Segment>();
+  HashMap<Segment, Rotation2d> anglePerSegment = new HashMap<Segment, Rotation2d>();
   Translation2d vecVel;
   Rotation2d wantedAngle;
 
@@ -90,29 +98,18 @@ public class PathFollow extends Command {
 
 
 
-    public static double convertAlliance(double x) {
+  public static double convertAlliance(double x) {
     return fieldLength - x;
   }
 
-  /*
-   * public String currentSegmentInfo() {
-   * 
-   * if (segments == null)
-   * return "";
-   * return segments[segmentIndex].toString();
-   * }
-   */
-
-  @Override
-  public void initialize() {
-
-    distancePassed = 0;
-
+  
+  public String currentSegmentInfo() {
     
-    driveTrapezoid = new Trapezoid(points[0].getVelocity(), PATH_ACCEL, points[1].getVelocity());
-
-    segments = new Segment[1 + ((points.length - 2) * 2)];
-
+    if (segments == null) return "";
+    return segments.get(segmentIndex).toString();
+  }
+  private void initPoints(){
+    
     isRed = RobotContainer.robotContainer.isRed();
     // sets first point to chassis pose to prevent bugs with red and blue alliance
     points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(), points[1].getRotation(),
@@ -123,40 +120,71 @@ public class PathFollow extends Command {
       points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(),
           Rotation2d.fromDegrees(180).minus(points[1].getRotation()), points[0].getRadius(), chassis.getVelocity().getNorm());
       for (int i = 1; i < points.length; i++) {
-        points[i] = new pathPoint(fieldLength - points[i].getX(), points[i].getY(),
+        points[i] = new pathPoint(convertAlliance(points[i].getX()), points[i].getY(),
             Rotation2d.fromDegrees(180).minus(points[i].getRotation()),
             points[i].getRadius(), points[i].getVelocity());
             
       }
     }
+    
+  }
+  
+  private void initCorners(){
     corners = new RoundedPoint[points.length - 2];
     for (int i = 0; i < points.length - 2; i++) {
       corners[i] = new RoundedPoint(points[i], points[i + 1], points[i + 2]);
     }
-    // case for 1 segment, need to create only 1 leg
-    if (points.length < 3) {
-      segments[0] = AvoidBannedZone.fixPoint(new Leg(points[0].getTranslation(), points[1].getTranslation()), points[0].getTranslation());
-      // System.out.println("------LESS THAN 3------");
-    }
-    // case for more then 1 segment
-    else {
-      // creates the first leg
-      segments[0] = corners[0].getAtoCurveLeg();
 
-      int segmentIndexCreator = 1;
+  }
+
+  private void initSegments(){
+  if (points.length < 3) {
+    for(Segment segment : AvoidBannedZone.fixPoint(new Leg(points[0].getTranslation(), points[1].getTranslation()), points[0].getTranslation())){
+      segments.add(segment);
+    }
+    
+    
+  }
+  // case for more then 1 segment
+  else {
+    // creates the first leg
+      for(Segment segment : AvoidBannedZone.fixPoint(corners[0].getAtoCurveLeg(), points[0].getTranslation())){
+        segments.add(segment);
+      }
+
       // creates arc than leg
       for (int i = 0; i < corners.length - 1; i += 1) {
+        
 
-        segments[segmentIndexCreator] = corners[i].getArc();
+        
+        for (Segment segment : AvoidBannedZone.fixPoint(corners[i].getArc(), corners[i].getAtoCurveLeg().getPoints()[0])) {
+          segments.add(segment);
+        }
+        for(Segment segment : AvoidBannedZone.fixPoint(new Leg(corners[i].getCurveEnd(), corners[i + 1].getCurveStart()), points[i].getTranslation())){
+          segments.add(segment);
+        }
+        
 
-        segments[segmentIndexCreator + 1] = new Leg(corners[i].getCurveEnd(), corners[i + 1].getCurveStart());
-        segmentIndexCreator += 2;
       }
+      segments.add(corners[corners.length - 1].getArc());
+      segments.add(corners[corners.length - 1].getCtoCurveLeg());
       // creates the last arc and leg
-      segments[segments.length - 2] = corners[corners.length - 1].getArc();
-      segments[segments.length - 1] = corners[corners.length - 1].getCtoCurveLeg();
     }
+  }
+   
 
+  
+  @Override
+  public void initialize() {
+
+    
+
+    distancePassed = 0;
+    driveTrapezoid = new Trapezoid(points[0].getVelocity(), PATH_ACCEL, points[1].getVelocity());
+
+    initPoints();
+    initCorners();
+    initSegments();
     // calculates the length of the entire path
     double segmentSum = 0;
     for (Segment s : segments) {
@@ -176,51 +204,65 @@ public class PathFollow extends Command {
     return fieldHeight - y;
   }
 
-  public boolean isFinishedSegment(double distancePassed, double segmentLength){
-    return distancePassed >= segmentLength;
+  public boolean isFinishedSegment(){
+    return segments.get(segmentIndex).distancePassed(chassisPose.getTranslation()) >= segments.get(segmentIndex).getLength() - PATH_DISTANCE_OFFSET;
   }
   public boolean isLastSegment(int index){
-    return index == segments.length - 1;
+    return index == segments.size() - 1;
   }
+  private boolean isNotFirstSegment(){
+    return segmentIndex != 0;
+  }
+
+  int angleIndex = 1;
+  PIDController pid = new PIDController(0.005, 0, 0);
 
   @Override
   public void execute() {
+    
     chassisPose = chassis.getPose();
 
     // current velocity vector
-    Translation2d currentVelocity = new Translation2d(chassis.getChassisSpeeds().vxMetersPerSecond, chassis.getChassisSpeeds().vyMetersPerSecond);
+    Translation2d currentVelocity = chassis.getVelocity();
 
     //calc for distance passed based on total left minus distance passed on current segment
-    distancePassed = totalLeft - segments[segmentIndex].distancePassed(chassisPose.getTranslation());
+    distancePassed = totalLeft - segments.get(segmentIndex).distancePassed(chassisPose.getTranslation());
 
-    wantedAngle = points[segmentIndex].getRotation();
+
+    
+    wantedAngle = points[angleIndex].getRotation();
 
     //update total left when finished current segment
-    if(isFinishedSegment(segments[segmentIndex].distancePassed(chassisPose.getTranslation()), segments[segmentIndex].getLength() - PATH_DISTANCE_OFFSET)){
-      totalLeft -= segments[segmentIndex].getLength();
+    if(isFinishedSegment()){
+      totalLeft -= segments.get(segmentIndex).getLength();
+      if(isNotFirstSegment()) angleIndex++;
+      
       
       //update segment index
-      if (!isLastSegment(segmentIndex) || segments[segmentIndex].getLength() <= 0.15){
-        segmentIndex++;
+      if (!isLastSegment(segmentIndex) || segments.get(segmentIndex).getLength() <= 0.15){
+            
+
         driveTrapezoid = new Trapezoid(points[segmentIndex].getVelocity(), accel, points[segmentIndex+1].getVelocity());
+        segmentIndex++;
       }
       else driveTrapezoid = new Trapezoid(points[segmentIndex].getVelocity(), accel, finishVel);
     }
 
     //calc drive velocity
     driveVelocity = driveTrapezoid.calcVelocity(
-        totalLeft - segments[segmentIndex].distancePassed(chassisPose.getTranslation()),
+        totalLeft - segments.get(segmentIndex).distancePassed(chassisPose.getTranslation()),
         currentVelocity.getNorm());
 
-    Translation2d velVector = segments[segmentIndex].calc(chassisPose.getTranslation(), driveVelocity);
+    Translation2d velVector = segments.get(segmentIndex).calc(chassisPose.getTranslation(), driveVelocity);
 
     
     //case for correct Translation2d but wrong angle so stop chassis but keep rotation
     if (totalLeft <= PATH_DISTANCE_OFFSET) velVector = new Translation2d(0, 0);
 
     //calc rotation velocity based on PID
+
     double rotationVelocity = (Math.abs(wantedAngle.minus(chassis.getAngle()).getDegrees()) <= PATH_ANGLE_OFFSET)
-      ? 0 : PATH_ROTATION_PID.calculate(chassis.getAngle().getDegrees(), 0);
+      ? 0 : PATH_ROTATION_PID.calculate(wantedAngle.minus(chassis.getAngle()).getRadians(), 0);
 
     ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), rotationVelocity); 
     chassis.setVelocities(speed);

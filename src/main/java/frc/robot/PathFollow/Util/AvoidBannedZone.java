@@ -10,15 +10,13 @@ import java.util.List;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class AvoidBannedZone {
     private static RectanglePos[] bannedPos;
     private static RectanglePos intersectionPos = null;
     private static Segment currentSegment;
 
-    private static enum rectanglePoints{
-        TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT;
-    }
     
 
     private static boolean isInsideArc(Arc arc){
@@ -67,7 +65,11 @@ public class AvoidBannedZone {
         else{
             newPoints.add(new pathPoint(segment.p1, Rotation2d.fromDegrees(0), PATH_MAX_VELOCITY_AVOID));
             newPoints.add(new pathPoint(segment.p2, Rotation2d.fromDegrees(0), PATH_MAX_VELOCITY_AVOID));
+            if(isInsideArc((Arc)segment)) SmartDashboard.putBoolean("isValidSegment", false);
         }
+
+        
+
         RoundedPoint calcFirstArc = new RoundedPoint(newPoints.get(0), newPoints.get(1), newPoints.get(2));
         RoundedPoint calcSecondArc = new RoundedPoint(newPoints.get(1), newPoints.get(2), newPoints.get(3));
 
@@ -107,8 +109,6 @@ public class AvoidBannedZone {
         }
         return closet;
     }
-
-    
 
     private static boolean isIntersecting(Translation2d legP1, Translation2d legP2, Translation2d recP1, Translation2d recP2){
         double slopeLeg = calcSlope(legP1, legP2);
