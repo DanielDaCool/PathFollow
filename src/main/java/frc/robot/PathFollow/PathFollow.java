@@ -6,11 +6,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.deser.impl.ExternalTypeHandler.Builder;
+
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
@@ -37,7 +40,8 @@ public class PathFollow extends CommandBase {
   Trapezoid rotationTrapezoid;
 
   List<Segment> segments = new ArrayList<Segment>();
-  HashMap<Segment, Rotation2d> anglePerSegment = new HashMap<Segment, Rotation2d>();
+  List<Rotation2d> angles = new ArrayList<Rotation2d>();
+  
   Translation2d vecVel;
   Rotation2d wantedAngle;
 
@@ -96,6 +100,7 @@ public class PathFollow extends CommandBase {
 
   }
 
+  
 
 
   public static double convertAlliance(double x) {
@@ -137,14 +142,24 @@ public class PathFollow extends CommandBase {
 
   }
 
-  private void initSegments(){
-  if (points.length < 3) {
-    for(Segment segment : AvoidBannedZone.fixPoint(new Leg(points[0].getTranslation(), points[1].getTranslation()), points[0].getTranslation())){
-      segments.add(segment);
+  private void initAngles(){
+    for(int i = 0; i < points.length; i++){
+      angles.add(points[i].getRotation());
     }
-    
-    
   }
+
+
+  private void initSegments(){
+    if (points.length < 3) {
+      for(Segment segment : AvoidBannedZone.fixPoint(new Leg(points[0].getTranslation(), points[1].getTranslation()), points[0].getTranslation())){
+        segments.add(segment);
+      }
+      System.out.println("TEST: " + points[points.length - 1].getRotation());
+      angles.add(points[points.length - 1].getRotation());
+    
+    }
+
+
   // case for more then 1 segment
   else {
     // creates the first leg
@@ -153,22 +168,25 @@ public class PathFollow extends CommandBase {
       }
 
       // creates arc than leg
-      for (int i = 0; i < corners.length - 1; i += 1) {
+      for (int i = 0; i < corners.length - 1; i++) {
         
 
-        
+
+        //creates arc
         for (Segment segment : AvoidBannedZone.fixPoint(corners[i].getArc(), corners[i].getAtoCurveLeg().getPoints()[0])) {
           segments.add(segment);
         }
+
+        //creates leg
         for(Segment segment : AvoidBannedZone.fixPoint(new Leg(corners[i].getCurveEnd(), corners[i + 1].getCurveStart()), points[i].getTranslation())){
           segments.add(segment);
         }
         
-
       }
+      // creates the last arc and leg
       segments.add(corners[corners.length - 1].getArc());
       segments.add(corners[corners.length - 1].getCtoCurveLeg());
-      // creates the last arc and leg
+      
     }
   }
    
@@ -181,10 +199,12 @@ public class PathFollow extends CommandBase {
 
     distancePassed = 0;
     driveTrapezoid = new Trapezoid(points[0].getVelocity(), PATH_ACCEL, points[1].getVelocity());
+    rotationTrapezoid = new Trapezoid(Math.PI, Math.PI * 2, 0);
 
     initPoints();
     initCorners();
     initSegments();
+    initAngles();
     // calculates the length of the entire path
     double segmentSum = 0;
     for (Segment s : segments) {
@@ -210,42 +230,52 @@ public class PathFollow extends CommandBase {
   public boolean isLastSegment(int index){
     return index == segments.size() - 1;
   }
-  private boolean isNotFirstSegment(){
-    return segmentIndex != 0;
+
+  private boolean isCurrentSegmentLeg(){
+    return segments.get(segmentIndex) instanceof Leg;
   }
 
-  int angleIndex = 1;
-  PIDController pid = new PIDController(0.005, 0, 0);
 
+
+
+  int pointIndex = 0;
   @Override
   public void execute() {
     
+    
     chassisPose = chassis.getPose();
+
 
     // current velocity vector
     Translation2d currentVelocity = chassis.getVelocity();
+
 
     //calc for distance passed based on total left minus distance passed on current segment
     distancePassed = totalLeft - segments.get(segmentIndex).distancePassed(chassisPose.getTranslation());
 
 
     
-    wantedAngle = points[angleIndex].getRotation();
+    wantedAngle = angles.get(pointIndex);
+    System.out.println(currentSegmentInfo());
+    System.out.println(isCurrentSegmentLeg());
+    System.out.println(wantedAngle.getDegrees());
 
     //update total left when finished current segment
     if(isFinishedSegment()){
+      //if(isCurrentSegmentLeg()) pointIndex++;
       totalLeft -= segments.get(segmentIndex).getLength();
-      if(isNotFirstSegment()) angleIndex++;
+      
       
       
       //update segment index
       if (!isLastSegment(segmentIndex) || segments.get(segmentIndex).getLength() <= 0.15){
+        
             
 
-        driveTrapezoid = new Trapezoid(points[segmentIndex].getVelocity(), accel, points[segmentIndex+1].getVelocity());
+        driveTrapezoid = new Trapezoid(points[pointIndex].getVelocity(), accel, points[pointIndex+1].getVelocity());
         segmentIndex++;
       }
-      else driveTrapezoid = new Trapezoid(points[segmentIndex].getVelocity(), accel, finishVel);
+      else driveTrapezoid = new Trapezoid(points[pointIndex].getVelocity(), accel, finishVel);
     }
 
     //calc drive velocity
@@ -259,10 +289,10 @@ public class PathFollow extends CommandBase {
     //case for correct Translation2d but wrong angle so stop chassis but keep rotation
     if (totalLeft <= PATH_DISTANCE_OFFSET) velVector = new Translation2d(0, 0);
 
-    //calc rotation velocity based on PID
+    //calc rotation velocity based on Trapezoid
 
     double rotationVelocity = (Math.abs(wantedAngle.minus(chassis.getAngle()).getDegrees()) <= PATH_ANGLE_OFFSET)
-      ? 0 : PATH_ROTATION_PID.calculate(wantedAngle.minus(chassis.getAngle()).getRadians(), 0);
+      ? 0 : rotationTrapezoid.calcVelocity(chassis.getChassisSpeeds().omegaRadiansPerSecond, wantedAngle.minus(chassis.getAngle()).getRadians());
 
     ChassisSpeeds speed = new ChassisSpeeds(velVector.getX(), velVector.getY(), rotationVelocity); 
     chassis.setVelocities(speed);
