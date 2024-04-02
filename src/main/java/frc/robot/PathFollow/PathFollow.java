@@ -247,16 +247,15 @@ public class PathFollow extends CommandBase {
 
 
   int pointIndex = 0;
-  
   @Override
-  public void execute() {
-    
+  public void execute(){
     
     chassisPose = chassis.getPose();
     System.out.println("INDEX: " + pointIndex);
     System.out.println(isInPoint(chassisPose, points[pointIndex]));
 
     if(isInPoint(chassisPose, points[pointIndex])) pointIndex++;
+
 
 
     // current velocity vector
