@@ -28,7 +28,7 @@ import frc.robot.utils.Trapezoid;
 
 public class PathFollow extends CommandBase {
   Timer timer = new Timer();
-  Chassis chassis;
+  frc.robot.subsystems.chassis.Chassis chassis;
   RoundedPoint[] corners;
 
   Pose2d chassisPose = new Pose2d();
@@ -152,8 +152,7 @@ public class PathFollow extends CommandBase {
   private void initSegments(){
     if (points.length < 3) {
       for(Segment segment : AvoidBannedZone.fixPoint(new Leg(points[0].getTranslation(), points[1].getTranslation()), points[0].getTranslation())){
-        
-        System.out.println(segment);
+         
         segments.add(segment);
       }
       angles.add(points[points.length - 1].getRotation());
@@ -189,8 +188,8 @@ public class PathFollow extends CommandBase {
       segments.add(corners[corners.length - 1].getCtoCurveLeg());
       
     }
-    for (Segment segment : segments) {
-      if(segment.getLength() < PATH_MIN_DISTANCE_SEGMENT) segments.remove(segment);
+    for(int i = 0; i < segments.size(); i++){
+      if(segments.get(i).getLength() < PATH_MIN_DISTANCE_SEGMENT) segments.remove(i);
     }
   }
    
@@ -212,9 +211,12 @@ public class PathFollow extends CommandBase {
     // calculates the length of the entire path
     double segmentSum = 0;
     for (Segment s : segments) {
+      System.out.println("SEGMENT: " + s);
+      System.out.println("CURRENT SEGMENT LENGTH: " + s.getLength());
       segmentSum += s.getLength();
     }
     pathLength = segmentSum;
+    
     totalLeft = pathLength;
     segmentIndex = 0;
 
@@ -247,15 +249,14 @@ public class PathFollow extends CommandBase {
 
 
   int pointIndex = 0;
+  
   @Override
-  public void execute(){
+  public void execute() {
+    
     
     chassisPose = chassis.getPose();
-    System.out.println("INDEX: " + pointIndex);
-    System.out.println(isInPoint(chassisPose, points[pointIndex]));
 
     if(isInPoint(chassisPose, points[pointIndex])) pointIndex++;
-
 
 
     // current velocity vector
