@@ -49,8 +49,6 @@ public class PathFollow extends CommandBase {
   double driveVelocity;
   double rotationVelocity;
 
-  static double fieldLength = 16.54; // in meters
-  static double fieldHeight = 8.21; // in meters
   
   boolean isRed;
 
@@ -104,7 +102,7 @@ public class PathFollow extends CommandBase {
 
 
   public static double convertAlliance(double x) {
-    return fieldLength - x;
+    return FIELD_LENGTH - x;
   }
 
   
@@ -227,7 +225,7 @@ public class PathFollow extends CommandBase {
   // calculates the position of the closet april tag and returns it's position
  
   public static double fixY(double y) {
-    return fieldHeight - y;
+    return FIELD_HEIGHT - y;
   }
 
   public boolean isFinishedSegment(){

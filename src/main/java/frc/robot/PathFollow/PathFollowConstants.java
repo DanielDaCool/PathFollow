@@ -13,4 +13,7 @@ public class PathFollowConstants {
     public static double PATH_MIN_DISTANCE_FROM_CORNER = (ROBOT_LENGTH / 2) + 0.6; //in CM
     public static double PATH_MAX_VELOCITY_AVOID = 1.5;
     public static double PATH_MIN_DISTANCE_SEGMENT = 0.15;
+    public static double FIELD_LENGTH = 16.54; // in meters
+    public static double FIELD_HEIGHT = 8.21; // in meters
+
 }
