@@ -275,7 +275,6 @@ public class PathFollow extends CommandBase {
   @Override
   public void execute() {
 
-    paths.get(segmentIndex).execute(); // TODO look at logic
 
     chassisPose = chassis.getPose();
     if(isInPoint(chassisPose, points[pointIndex])) pointIndex++;
@@ -302,6 +301,8 @@ public class PathFollow extends CommandBase {
         else driveTrapezoid = new Trapezoid(points[pointIndex].getVelocity(), accel, finishVel);
         
         segmentIndex++;
+        paths.get(segmentIndex).schedule();
+        
       }
       else driveTrapezoid = new Trapezoid(points[pointIndex].getVelocity(), accel, finishVel);
     }
