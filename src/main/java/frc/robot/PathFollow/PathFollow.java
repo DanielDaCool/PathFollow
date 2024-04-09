@@ -17,6 +17,8 @@ import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import frc.robot.Robot;
 import frc.robot.RobotContainer;
 import frc.robot.PathFollow.Util.AvoidBannedZone;
 import frc.robot.PathFollow.Util.Leg;
@@ -25,17 +27,16 @@ import frc.robot.PathFollow.Util.Segment;
 import frc.robot.PathFollow.Util.pathPoint;
 import frc.robot.subsystems.chassis.Chassis;
 import frc.robot.utils.Trapezoid;
+import frc.robot.subsystems.chassis.Chassis;
 
 public class PathFollow extends CommandBase {
   Timer timer = new Timer();
-  frc.robot.subsystems.chassis.Chassis chassis;
+  Chassis chassis;
   RoundedPoint[] corners;
-
   Pose2d chassisPose = new Pose2d();
-
   double pathLength;
-
   double totalLeft;
+
   int segmentIndex;
   Trapezoid rotationTrapezoid;
 
@@ -57,8 +58,10 @@ public class PathFollow extends CommandBase {
   double finishVel;
   double maxVel;
   double accel;
-
   Trapezoid driveTrapezoid;
+  Segment currentSegment;
+
+  List<PathFollow> paths = new ArrayList<PathFollow>();
 
 
   /**
@@ -75,15 +78,24 @@ public class PathFollow extends CommandBase {
   public PathFollow(pathPoint[] points){
     this(RobotContainer.robotContainer.chassis, points, PATH_MAX_VELOCITY, PATH_ACCEL, 0);
     addRequirements(chassis);
+    init();
+  }
+  public PathFollow(Segment segment){
+    this(RobotContainer.robotContainer.chassis, null, PATH_MAX_VELOCITY, PATH_ACCEL, 0);
+    currentSegment = segment;
+    addRequirements(chassis);
+    
   }
 
   public PathFollow(pathPoint[] points, double vel){
     this(RobotContainer.robotContainer.chassis, points, vel, PATH_ACCEL, 0);
     addRequirements(chassis);
+    init();
   }
   public PathFollow(pathPoint[] points, double vel, double finishVel){
     this(RobotContainer.robotContainer.chassis, points, vel, PATH_ACCEL, finishVel);
     addRequirements(chassis);
+    init();
   }
 
   public PathFollow(Chassis chassis, pathPoint[] points, double maxVel, double accel, double finishVel) {
@@ -94,6 +106,7 @@ public class PathFollow extends CommandBase {
     this.accel = accel; 
     addRequirements(chassis);
 
+    init();
     
 
   }
@@ -190,6 +203,18 @@ public class PathFollow extends CommandBase {
       if(segments.get(i).getLength() < PATH_MIN_DISTANCE_SEGMENT) segments.remove(i);
     }
   }
+  
+  private void init(){
+    initPoints();
+    initCorners();
+    initSegments();
+    initAngles();
+    
+    for (Segment segment : segments) {
+      paths.add(new PathFollow(segment));
+    }
+  }
+  
    
 
   
@@ -200,12 +225,13 @@ public class PathFollow extends CommandBase {
 
     distancePassed = 0;
     driveTrapezoid = new Trapezoid(points[0].getVelocity(), PATH_ACCEL, points[1].getVelocity());
-    rotationTrapezoid = new Trapezoid(Math.PI, Math.PI * 2, 0);
+    rotationTrapezoid = new Trapezoid(PATH_ROTATION_MAX_VELOCITY, PATH_ROTATION_ACCEL, 0);
 
-    initPoints();
-    initCorners();
-    initSegments();
-    initAngles();
+
+  
+    
+    
+
     // calculates the length of the entire path
     double segmentSum = 0;
     for (Segment s : segments) {
@@ -235,28 +261,24 @@ public class PathFollow extends CommandBase {
     return index == segments.size() - 1;
   }
 
-  private boolean isCurrentSegmentLeg(){
-    return segments.get(segmentIndex) instanceof Leg;
-  }
   private boolean isInPoint(Pose2d pose, pathPoint point){
     boolean isLastIndex = (pointIndex == points.length - 1);
     return (isLastIndex) ? false : Math.abs(pose.getX() - point.getX()) <= 0.5 && Math.abs(pose.getY() - point.getY()) <= 0.5;
   }
+ 
+
 
 
 
 
   int pointIndex = 0;
-  
   @Override
   public void execute() {
-    
-    
+
+    paths.get(segmentIndex).execute(); // TODO look at logic
+
     chassisPose = chassis.getPose();
-
     if(isInPoint(chassisPose, points[pointIndex])) pointIndex++;
-
-
     // current velocity vector
     Translation2d currentVelocity = chassis.getVelocity();
 
@@ -271,10 +293,7 @@ public class PathFollow extends CommandBase {
     //update total left when finished current segment
     if(isFinishedSegment()){
       
-      totalLeft -= segments.get(segmentIndex).getLength();
-      
-      
-      
+      totalLeft -= segments.get(segmentIndex).getLength(); 
       //update segment index
       if (!isLastSegment(segmentIndex)){
         
@@ -299,7 +318,6 @@ public class PathFollow extends CommandBase {
     if (totalLeft <= PATH_DISTANCE_OFFSET) velVector = new Translation2d(0, 0);
 
     //calc rotation velocity based on Trapezoid
-
     double rotationVelocity = (Math.abs(wantedAngle.minus(chassis.getAngle()).getDegrees()) <= PATH_ANGLE_OFFSET)
       ? 0 : rotationTrapezoid.calcVelocity(chassis.getChassisSpeeds().omegaRadiansPerSecond, wantedAngle.minus(chassis.getAngle()).getRadians());
 
