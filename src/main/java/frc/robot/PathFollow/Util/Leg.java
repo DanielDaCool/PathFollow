@@ -40,6 +40,7 @@ public class Leg extends Segment{
         return new Translation2d(velocity, relativePos.times(-1).getAngle().minus(diffAngle));
 
     }
+    
 
     @Override
     public double distancePassed(Translation2d position)
@@ -55,6 +56,7 @@ public class Leg extends Segment{
     {
         return totalVector.getNorm();
     }
+
 
    
 
