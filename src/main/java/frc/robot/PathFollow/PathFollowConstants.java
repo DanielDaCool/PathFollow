@@ -22,7 +22,7 @@ public class PathFollowConstants {
     }
 
     public static boolean isInPoint(Translation2d pos, Translation2d point){
-        return pos.getDistance(point) <= 0.05;
+        return point.getDistance(pos) <= 0.50;
     }
 
  

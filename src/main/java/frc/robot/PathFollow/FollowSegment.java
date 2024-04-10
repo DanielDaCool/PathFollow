@@ -9,8 +9,8 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import frc.robot.RobotContainer;
 import frc.robot.PathFollow.Util.Segment;
-import frc.robot.utils.Trapezoid;
 import frc.robot.subsystems.chassis.Chassis;
+import frc.robot.utils.Trapezoid;
 
 public class FollowSegment extends CommandBase {
   Chassis chassis;
@@ -36,6 +36,8 @@ public class FollowSegment extends CommandBase {
 
   Translation2d vecVel;
 
+  CommandInPos command;
+
 
 
   /**
@@ -49,13 +51,14 @@ public class FollowSegment extends CommandBase {
 
 
 
-   public FollowSegment(double wantedVel, double nextVel, Segment segment, Rotation2d wantedAngle){
+   public FollowSegment(double wantedVel, double nextVel, Segment segment, Rotation2d wantedAngle, CommandInPos command){
     this.wantedVel = wantedVel;
     this.nextVel = nextVel;
     this.accel = PATH_ACCEL;
     this.segment = segment;
     this.wantedAngle = wantedAngle;
     this.chassis = RobotContainer.robotContainer.chassis;
+    this.command = command;
 
    }
 
@@ -69,8 +72,6 @@ public class FollowSegment extends CommandBase {
     driveTrapezoid = new Trapezoid(wantedVel, accel, nextVel);
     rotationTrapezoid = new Trapezoid(PATH_ROTATION_MAX_VELOCITY, PATH_ROTATION_ACCEL, 0);
 
-    System.out.println("Wanted vel: " + wantedVel);
-    System.out.println("finish vel: " + nextVel);
 
     segmentLength = segment.getLength();
     distanceLeft = segmentLength;
@@ -92,6 +93,11 @@ public class FollowSegment extends CommandBase {
     
     // current velocity vector
     Translation2d currentVelocity = chassis.getVelocity();
+
+    if(command != null){
+      command.scheduleIfInPos(chassisPose.getTranslation());
+      
+    } 
 
     distanceLeft = segmentLength - segment.distancePassed(chassisPose.getTranslation());
     
