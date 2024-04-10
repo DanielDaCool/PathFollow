@@ -28,6 +28,7 @@ public class Path extends CommandBase{
     Segment currentSegment;
 
     FollowSegment currentFollowSegment;
+    CommandInPos current;
 
     public Path(pathPoint[] points){
         this.points = points;
@@ -128,7 +129,7 @@ public class Path extends CommandBase{
          segments.get(0), points[1].getRotation(), points[0].getCommandInPos());
         currentFollowSegment.schedule();
         currentSegment = segments.get(0);
-
+        current = points[0].getCommandInPos();
     }
     @Override
     public void execute(){
@@ -152,7 +153,9 @@ public class Path extends CommandBase{
         }
         else currentFollowSegment = new FollowSegment(points[pointsIndex].getVelocity(), 0, currentSegment, points[pointsIndex].getRotation(), points[pointsIndex].getCommandInPos());
         currentFollowSegment.schedule();
+        current = points[pointsIndex].getCommandInPos();
       }
+      System.out.println("Current command: " + current);
         
     }
     @Override
