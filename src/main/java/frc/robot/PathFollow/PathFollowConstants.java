@@ -1,10 +1,7 @@
 
 package frc.robot.PathFollow;
 
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import frc.robot.PathFollow.Util.Segment;
 
 public class PathFollowConstants {
     public static double ROBOT_LENGTH = 0.50; //TODO

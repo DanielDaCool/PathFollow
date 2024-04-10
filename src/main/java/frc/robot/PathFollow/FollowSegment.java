@@ -2,29 +2,13 @@ package frc.robot.PathFollow;
 
 import static frc.robot.PathFollow.PathFollowConstants.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
-import com.fasterxml.jackson.databind.deser.impl.ExternalTypeHandler.Builder;
-
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.util.sendable.SendableBuilder;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
-import edu.wpi.first.wpilibj2.command.RunCommand;
-import frc.robot.Robot;
 import frc.robot.RobotContainer;
-import frc.robot.PathFollow.Util.AvoidBannedZone;
-import frc.robot.PathFollow.Util.Leg;
-import frc.robot.PathFollow.Util.RoundedPoint;
 import frc.robot.PathFollow.Util.Segment;
-import frc.robot.PathFollow.Util.pathPoint;
 import frc.robot.utils.Trapezoid;
 import frc.robot.subsystems.chassis.Chassis;
 
@@ -85,6 +69,9 @@ public class FollowSegment extends CommandBase {
     driveTrapezoid = new Trapezoid(wantedVel, accel, nextVel);
     rotationTrapezoid = new Trapezoid(PATH_ROTATION_MAX_VELOCITY, PATH_ROTATION_ACCEL, 0);
 
+    System.out.println("Wanted vel: " + wantedVel);
+    System.out.println("finish vel: " + nextVel);
+
     segmentLength = segment.getLength();
     distanceLeft = segmentLength;
 
@@ -106,8 +93,7 @@ public class FollowSegment extends CommandBase {
     // current velocity vector
     Translation2d currentVelocity = chassis.getVelocity();
 
-    distanceLeft = segmentLength - segment.distancePassed(chassisPose.getTranslation()); // TODO need to fix this problem
-    System.out.println("DISTANCE LEFT: " + distanceLeft);
+    distanceLeft = segmentLength - segment.distancePassed(chassisPose.getTranslation());
     
 
     
@@ -127,6 +113,9 @@ public class FollowSegment extends CommandBase {
 
   }
 
+  @Override
+  public void end(boolean interrupted) {
+  }
   
   @Override
   public boolean isFinished(){

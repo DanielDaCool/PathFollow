@@ -3,10 +3,8 @@ package frc.robot.PathFollow;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import frc.robot.RobotContainer;
 import frc.robot.PathFollow.Util.Leg;
@@ -14,7 +12,6 @@ import frc.robot.PathFollow.Util.RoundedPoint;
 import frc.robot.PathFollow.Util.Segment;
 import frc.robot.PathFollow.Util.pathPoint;
 import frc.robot.subsystems.chassis.Chassis;
-import frc.robot.utils.Trapezoid;
 import static frc.robot.PathFollow.PathFollowConstants.*;
 
 public class Path extends CommandBase{
@@ -43,9 +40,6 @@ public class Path extends CommandBase{
 
     private void initPoints(){
 
-        for (pathPoint point : points) {
-          System.out.println(point);
-        }
         isRed = RobotContainer.robotContainer.isRed();
         // sets first point to chassis pose to prevent bugs with red and blue alliance
         points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(), points[1].getRotation(),
@@ -72,8 +66,11 @@ public class Path extends CommandBase{
     }
     
    
-     private void initSegments(){
-    if (points.length < 3) {
+    private boolean isLastSegment(){
+      return segmentIndex == segments.size() - 1;
+    }
+    private void initSegments(){
+      if (points.length < 3) {
 
         segments.add(new Leg(points[0].getTranslation(), points[1].getTranslation()));
     
@@ -108,6 +105,8 @@ public class Path extends CommandBase{
       if(segments.get(i).getLength() < PATH_MIN_DISTANCE_SEGMENT) segments.remove(i);
     }
   }
+
+
     
     private void init(){
         initPoints();
@@ -122,12 +121,10 @@ public class Path extends CommandBase{
     @Override
     public void initialize(){
         init();
-        currentFollowSegment = new FollowSegment(points[0].getVelocity(), points[1].getVelocity(), segments.get(0), points[1].getRotation());
+        currentFollowSegment = new FollowSegment(points[0].getVelocity(), points[1].getVelocity(),
+         segments.get(0), points[1].getRotation());
         currentFollowSegment.schedule();
         currentSegment = segments.get(0);
-        for (Segment segment : segments) {
-          System.out.println(segment);
-        }
 
     }
     @Override
@@ -143,15 +140,16 @@ public class Path extends CommandBase{
         if(currentFollowSegment.isFinished()){
             segmentIndex++;
             updateCurrentSegment();
-            currentFollowSegment = new FollowSegment(FIELD_LENGTH, FIELD_HEIGHT, currentSegment, points[pointsIndex].getRotation());
+            currentFollowSegment = new FollowSegment(FIELD_LENGTH, FIELD_HEIGHT, currentSegment,
+             points[pointsIndex].getRotation());
             currentFollowSegment.schedule();
         }
         
     }
     @Override
     public void end(boolean interrupted){
-        System.out.println("Ended");
-        chassis.stop();
+      chassis.stop();
+  
     }
     @Override
     public boolean isFinished(){
