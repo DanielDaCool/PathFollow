@@ -8,7 +8,6 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.PathFollow.PathFollowConstants.TimeOfCommand;
 
 /**
  * 
@@ -19,7 +18,6 @@ public class pathPoint extends Pose2d{
     double radius;
     double velocity;
     Command command;
-    TimeOfCommand timeOfCommand;
     boolean waitUntilCommandIsFinished;
 
     public pathPoint(Translation2d p, Rotation2d r, double velocity) {
@@ -40,20 +38,18 @@ public class pathPoint extends Pose2d{
     }
 
 
-    public pathPoint(Translation2d t, Rotation2d rotation, double radius, double velocity, Command command, TimeOfCommand timeOfCommand, boolean waitUntilCommandIsFinished) {
+    public pathPoint(Translation2d t, Rotation2d rotation, double radius, double velocity, Command command, boolean waitUntilCommandIsFinished) {
       super(t.getX(), t.getY(),rotation);
       this.radius = radius;
       this.velocity = velocity;
       this.command = command;
-      this.timeOfCommand = timeOfCommand;
       this.waitUntilCommandIsFinished = waitUntilCommandIsFinished;
     }
-    public pathPoint(double x, double y, Rotation2d rotation, double radius, double velocity, Command command, TimeOfCommand timeOfCommand, boolean waitUntilCommandIsFinished) {
+    public pathPoint(double x, double y, Rotation2d rotation, double radius, double velocity, Command command, boolean waitUntilCommandIsFinished) {
       super(x, y, rotation);
       this.radius = radius;
       this.velocity = velocity;
       this.command = command;
-      this.timeOfCommand = timeOfCommand;
       this.waitUntilCommandIsFinished = waitUntilCommandIsFinished;
     }
     
@@ -76,9 +72,6 @@ public class pathPoint extends Pose2d{
     }
     public void setCommand(Command command){
       this.command = command;
-    }
-    public TimeOfCommand getTimeOfCommand(){
-      return timeOfCommand;
     }
     public boolean getWaitStatus(){
       return waitUntilCommandIsFinished;
