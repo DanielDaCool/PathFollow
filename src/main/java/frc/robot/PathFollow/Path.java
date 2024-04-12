@@ -47,7 +47,7 @@ public class Path extends CommandBase{
 
         isRed = RobotContainer.robotContainer.isRed();
         // sets first point to chassis pose to prevent bugs with red and blue alliance
-        points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(), (points[0] != null) ? Rotation2d.fromDegrees(0) : points[0].getRotation(),
+        points[0] = new pathPoint(chassis.getPose().getX(), chassis.getPose().getY(), (points[0].getRotation() != null) ? Rotation2d.fromDegrees(0) : points[0].getRotation(),
             points[0].getRadius(), points[pointsIndex].getVelocity());
     
         // case for red alliance (blue is the default)
