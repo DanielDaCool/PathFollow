@@ -50,6 +50,7 @@ public class pathPoint extends Pose2d{
       this.radius = radius;
       this.velocity = velocity;
       this.command = command;
+
       this.waitUntilCommandIsFinished = waitUntilCommandIsFinished;
     }
     

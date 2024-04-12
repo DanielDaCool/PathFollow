@@ -25,9 +25,6 @@ public class PathFollowConstants {
         return Math.abs(point.getDistance(pos)) <= 0.50;
     }
 
-    public static enum TimeOfCommand{
-        ALONG_WITH, END
-    }
 
  
 

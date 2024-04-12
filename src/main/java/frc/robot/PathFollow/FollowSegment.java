@@ -37,6 +37,8 @@ public class FollowSegment extends CommandBase {
 
   Translation2d vecVel;
 
+  Command command;
+
 
 
 
@@ -51,13 +53,14 @@ public class FollowSegment extends CommandBase {
 
 
 
-   public FollowSegment(double wantedVel, double nextVel, Segment segment, Rotation2d wantedAngle){
+   public FollowSegment(double wantedVel, double nextVel, Segment segment, Rotation2d wantedAngle, Command command){
     this.wantedVel = wantedVel;
     this.nextVel = nextVel;
     this.accel = PATH_ACCEL;
     this.segment = segment;
     this.wantedAngle = wantedAngle;
     this.chassis = RobotContainer.robotContainer.chassis;
+    this.command = command;
    }
 
  
